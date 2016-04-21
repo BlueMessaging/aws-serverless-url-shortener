@@ -78,7 +78,7 @@ module.exports = function(grunt) {
         }
     });
 
-    grunt.registerTask('build', ['clean',  'copy', 'compress']);
+    grunt.registerTask('build', ['clean',  'copy:default', 'compress:default']);
     grunt.registerTask('build:admin', ['clean',  'copy:admin', 'compress']);
 
 };

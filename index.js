@@ -41,19 +41,33 @@ function getFromRedis(key) {
     });
 }
 
-function setOnRedis(key, value) {
+/**
+ * Try to save a new key with the given value on Redis, if the key already exists the promise will
+ * be rejected.
+ * @param {String} key Of the value
+ * @param {String} value To store in Redis
+ * @param {String} [expiration] in seconds
+ * @returns {Promise} Promise will be rejected if the calls to redis fail or if the key already
+ * exists
+ */
+function setOnRedis(key, value, expiration) {
     return new Promise(function(resolve, reject) {
         getFromRedis(key).then(function(reply) {
             if(reply) {
                 reject("Key already exists");
             } else {
-                client.set(key, value, function (err, replies) {
+                var callback = function (err, replies) {
                     if (err) {
                         reject(err);
                     } else {
                         resolve(replies);
                     }
-                })
+                };
+                if (expiration) {
+                    client.setex(key, expiration, value, callback)
+                } else {
+                    client.set(key, value, callback)
+                }
             }
         }, function(err) {
             reject(err);
@@ -96,9 +110,9 @@ exports.shortener = function(event, context, callback) {
             console.log(err);
             key = getRandomKey();
             console.log("Retry with key: " + key);
-            setOnRedis(key, event.url).then(success, fail);
+            setOnRedis(key, event.url, event.expiration).then(success, fail);
         };
-        setOnRedis(key, event.url).then(success, fail);
+        setOnRedis(key, event.url, event.expiration).then(success, fail);
     }
     else if (event.id) {
         client.get(event.id, function(err, reply) {
